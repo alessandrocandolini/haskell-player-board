@@ -1,4 +1,4 @@
-[![CI](https://github.com/alessandrocandolini/haskell-player-board/actions/workflows/ci.yml/badge.svg)](https://github.com/alessandrocandolini/haskell-player-board/actions/workflows/ci.yml)
+[![CI](https://github.com/alessandrocandolini/haskell-player-board/actions/workflows/ci.yml/badge.svg)](https://github.com/alessandrocandolini/haskell-player-board/actions/workflows/ci.yml) [![codecov](https://codecov.io/gh/alessandrocandolini/haskell-player-board/branch/main/graph/badge.svg?token=TLSMPanGeM)](https://codecov.io/gh/alessandrocandolini/haskell-player-board)
 
 # haskell-player-board
 
