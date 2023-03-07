@@ -1,0 +1,14 @@
+cradle:
+  stack:
+    - path: "./src"
+      component: "haskell-player-board:lib"
+
+    - path: "./app/Main.hs"
+      component: "haskell-player-board:exe:haskell-player-board-exe"
+
+    - path: "./app/Paths_haskell-player-board.hs"
+      component: "haskell-player-board:exe:haskell-player-board-exe"
+
+    - path: "./test"
+      component: "haskell-player-board:test:haskell-player-board-test"
+
