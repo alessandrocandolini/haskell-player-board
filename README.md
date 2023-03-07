@@ -1,3 +1,5 @@
+[![CI](https://github.com/alessandrocandolini/haskell-player-board/actions/workflows/ci.yml/badge.svg)](https://github.com/alessandrocandolini/haskell-player-board/actions/workflows/ci.yml)
+
 # haskell-player-board
 
 ## How to build and run locally
