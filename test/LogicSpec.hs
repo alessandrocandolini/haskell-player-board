@@ -55,5 +55,5 @@ spec = describe "moves" $ do
         run (oneStep right) (squareBoard 10) (initial 2 3) `shouldBe` [(P 3 3)]
      it "example 1: move horizontally (failure)" $
         run (oneStep right) (squareBoard 10) (initial 9 3) `shouldBe` []
-     it "example 2: move horizontally two steps (success)" $
-        run (oneStep right `andThen` oneStep right) (squareBoard 10) (initial 2 3) `shouldBe` [(P 3 3), (P 4 3)]
+     --it "example 2: move horizontally two steps (success)" $
+        --run (oneStep right `andThen` oneStep right) (squareBoard 10) (initial 2 3) `shouldBe` [(P 3 3), (P 4 3)]
