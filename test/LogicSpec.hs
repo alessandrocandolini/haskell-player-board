@@ -50,10 +50,17 @@ spec = describe "moves" $ do
      it "on rightDown moves a point right and then down in a single move" $
         runMove twoRightOneDown (P 7 5) `shouldBe` (P 9 4)
 
+   describe "move" $ do
+     it "move inside the board" $
+        move (squareBoard 10) right (P 5 5) `shouldBe` Just (P 6 5)
+
+
    describe "run" $ do
      it "example 1: move horizontally (success)" $
         run (oneStep right) (squareBoard 10) (initial 2 3) `shouldBe` [(P 3 3)]
      it "example 1: move horizontally (failure)" $
         run (oneStep right) (squareBoard 10) (initial 9 3) `shouldBe` []
-     --it "example 2: move horizontally two steps (success)" $
-        --run (oneStep right `andThen` oneStep right) (squareBoard 10) (initial 2 3) `shouldBe` [(P 3 3), (P 4 3)]
+     it "example 2: move horizontally two steps (success)" $
+        run (oneStep down `andThen` oneStep right `andThen` oneStep right) (squareBoard 10) (initial 5 5) `shouldBe` [(P 5 4) , (P 6 4), (P 7 4)]
+     it "example 2: move horizontally two steps (failure)" $
+        run (oneStep down `andThen` oneStep right `andThen` oneStep right) (squareBoard 10) (initial 9 5) `shouldBe` [(P 9 4)]

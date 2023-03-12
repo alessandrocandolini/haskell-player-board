@@ -11,11 +11,8 @@ import Data.Semigroup (appEndo)
 
 data Position = P Int Int deriving (Eq,Show)
 
-newtype InitialPosition = InitialPosition {
-   toPosition :: Position } deriving (Eq,Show)
-
-initial :: Int -> Int -> InitialPosition
-initial x y = InitialPosition (P x y)
+initial :: Int -> Int -> Position
+initial = P
 
 data Direction = Left | Right | Up | Down deriving (Eq, Show, Enum, Bounded)
 
@@ -92,14 +89,21 @@ simplify (Combine m1 m2) = case (simplify m1, simplify m2) of
      (Step Right, Step Left) -> Stay
      (p1, p2) -> Combine p1 p2
 
-data Board = SquareBoard Int deriving (Eq,Show)
+data Range = Range Int Int deriving (Eq,Show)
+
+inside :: Range -> Int -> Bool
+inside (Range x y) t = x <= t && t < y
+
+data Board = RectangularBoard {
+   xRange :: Range, yRange :: Range } deriving (Eq,Show)
 
 squareBoard :: Int -> Board
-squareBoard = SquareBoard
+squareBoard = RectangularBoard <$> range <*> range where
+   range = Range 0
 
-moveIfAllowed :: Board -> Move -> Position -> Maybe Position
-moveIfAllowed (SquareBoard n) m = mfilter isInside . Just . runMove m where
-   isInside (P x y) = x >= 0 && x <= (n-1) && y >= 0 && y <= (n - 1)
+move :: Board -> Move -> Position -> Maybe Position
+move (RectangularBoard w h) m = mfilter checkInside . pure . runMove m where
+   checkInside (P x y) = inside w x && inside h y
 
 data Strategy = Moves (NonEmpty Move)
         deriving (Eq, Show)
@@ -108,7 +112,7 @@ oneStep :: Move -> Strategy
 oneStep = Moves . N.singleton
 
 andThen :: Strategy -> Strategy -> Strategy
-andThen (Moves m1) (Moves m2) = Moves ( m1 <> m2 )
+andThen (Moves m1) (Moves m2) = Moves ( m2 <> m1 ) -- think what order is more readable
 
 repeat :: Strategy -> Strategy
 repeat = undefined
@@ -128,5 +132,13 @@ vertical  = repeat $ fill down
        `andThen` fill up
        `andThen` oneStep right
 
-run :: Strategy -> Board -> InitialPosition -> [Position]
-run (Moves m) b p = maybe [] singleton $ moveIfAllowed b (N.head m) (toPosition p)
+
+run :: Strategy -> Board -> Position -> [Position]
+run (Moves ms) b p0  = snd $ foldr f (pure p0, []) ms where
+     f m (Just p, ps) = case move b m p of
+              Just p' -> (Just p' , ps ++ [p'])
+              Nothing -> (Nothing, ps)
+     f _ (Nothing, ps) = (Nothing, ps)
+
+
+
