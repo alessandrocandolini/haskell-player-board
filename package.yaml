@@ -12,6 +12,8 @@ dependencies:
 - optparse-generic
 - aeson
 - generic-aeson
+- brick
+- groups
 
 default-extensions:
 - OverloadedStrings
