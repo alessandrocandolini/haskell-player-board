@@ -135,10 +135,7 @@ vertical  = repeat $ fill down
 
 run :: Strategy -> Board -> Position -> [Position]
 run (Moves ms) b p0  = snd $ foldr f (pure p0, []) ms where
-     f m (Just p, ps) = case move b m p of
-              Just p' -> (Just p' , ps ++ [p'])
-              Nothing -> (Nothing, ps)
-     f _ (Nothing, ps) = (Nothing, ps)
+     f m (p, ps) = maybe (Nothing, ps) (\p'' -> (Just p'', ps ++ [p''])) ( p >>= move b m )
 
 
 
