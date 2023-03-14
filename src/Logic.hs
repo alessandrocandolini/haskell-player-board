@@ -1,48 +1,42 @@
-{-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE LambdaCase #-}
+
 module Logic where
-import Prelude hiding (repeat, Right, Left)
-import Data.Group
+
 import Control.Monad (mfilter)
-import Data.List (singleton)
+import Control.Monad.State
+import Data.Group
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.List.NonEmpty as N
-import Data.Monoid (Endo)
-import Data.Semigroup (appEndo)
+import Data.Maybe (maybeToList)
+import Prelude hiding (Left, Right, repeat)
 
-data Position = P Int Int deriving (Eq,Show)
+data Position = P Int Int deriving (Eq, Show)
 
 initial :: Int -> Int -> Position
 initial = P
 
 data Direction = Left | Right | Up | Down deriving (Eq, Show, Enum, Bounded)
 
-
-data Move = Stay |
-            Step Direction |
-            Combine Move Move deriving (Eq,Show)
-
-newtype Move2 = Move2  { unMove2 :: Endo Position } deriving (Semigroup, Monoid) via (Endo Position)
-
-runMove2 :: Move2 -> Position -> Position
-runMove2 = appEndo . unMove2
+data Move
+  = Stay
+  | Step Direction
+  | Combine Move Move
+  deriving (Eq, Show)
 
 dontMove :: Move
 dontMove = Stay
 
-step :: Direction -> Move
-step = Step
-
 left :: Move
-left = step Left
+left = Step Left
 
 right :: Move
-right = step Right
+right = Step Right
 
 up :: Move
-up = step Up
+up = Step Up
 
 down :: Move
-down = step Down
+down = Step Down
 
 rightDown :: Move
 rightDown = right <> down
@@ -78,64 +72,111 @@ instance Group Move where
   invert (Step Down) = Step Up
   invert (Combine m1 m2) = Combine (invert m2) (invert m1)
 
-
 simplify :: Move -> Move
 simplify Stay = Stay
 simplify s@(Step _) = s
 simplify (Combine m1 m2) = case (simplify m1, simplify m2) of
-     (Stay, p) -> p
-     (p , Stay) -> p
-     (Step Left, Step Right) -> Stay
-     (Step Right, Step Left) -> Stay
-     (p1, p2) -> Combine p1 p2
+  (Stay, p) -> p
+  (p, Stay) -> p
+  (Step Left, Step Right) -> Stay
+  (Step Right, Step Left) -> Stay
+  (p1, p2) -> Combine p1 p2
 
-data Range = Range Int Int deriving (Eq,Show)
+data Range = Range Int Int deriving (Eq, Show)
 
 inside :: Range -> Int -> Bool
 inside (Range x y) t = x <= t && t < y
 
-data Board = RectangularBoard {
-   xRange :: Range, yRange :: Range } deriving (Eq,Show)
+data Board
+  = InfiniteBoard
+  | RectangularBoard
+      { xRange :: Range,
+        yRange :: Range
+      }
+  deriving (Eq, Show)
 
 squareBoard :: Int -> Board
-squareBoard = RectangularBoard <$> range <*> range where
-   range = Range 0
+squareBoard n = rectangularBoard n n
+
+rectangularBoard :: Int -> Int -> Board
+rectangularBoard w h = RectangularBoard (range w) (range h)
+  where
+    range = Range 0
 
 move :: Board -> Move -> Position -> Maybe Position
-move (RectangularBoard w h) m = mfilter checkInside . pure . runMove m where
-   checkInside (P x y) = inside w x && inside h y
+move (RectangularBoard w h) m = mfilter checkInside . pure . runMove m
+  where
+    checkInside (P x y) = inside w x && inside h y
+move InfiniteBoard m = pure . runMove m
 
-data Strategy = Moves (NonEmpty Move)
-        deriving (Eq, Show)
+data Strategy
+  = OneStep Move
+  | AndThen Strategy Strategy
+  | OrElse Strategy Strategy
+  | Repeat Strategy
+  deriving (Eq, Show)
 
 oneStep :: Move -> Strategy
-oneStep = Moves . N.singleton
+oneStep = OneStep
 
 andThen :: Strategy -> Strategy -> Strategy
-andThen (Moves m1) (Moves m2) = Moves ( m2 <> m1 ) -- think what order is more readable
+andThen = AndThen
+
+orElse :: Strategy -> Strategy -> Strategy
+orElse = OrElse
 
 repeat :: Strategy -> Strategy
-repeat = undefined
+repeat = Repeat
 
 fill :: Move -> Strategy
 fill = repeat . oneStep
 
 horizontal :: Strategy
-horizontal = repeat $ fill right
-       `andThen` oneStep down
-       `andThen` fill left
-       `andThen` oneStep down
+horizontal =
+  repeat $
+    fill right
+      `andThen` oneStep up
+      `andThen` fill left
+      `andThen` oneStep up
 
 vertical :: Strategy
-vertical  = repeat $ fill down
-       `andThen` oneStep right
-       `andThen` fill up
-       `andThen` oneStep right
+vertical =
+  repeat $
+    fill up
+      `andThen` oneStep right
+      `andThen` fill down
+      `andThen` oneStep right
 
+diagonal :: Strategy
+diagonal = repeat $
+   oneStep right `andThen` oneStep up
+
+run' :: Strategy -> Board -> State (Maybe Position, [Position]) ()
+run' (OneStep m) b = do
+  (p, ps) <- get
+  let updated = p >>= move b m
+  put (updated, maybeToList updated ++ ps)
+run' (AndThen s1 s2) b =
+  run' s1 b >> run' s2 b
+run' (OrElse s1 s2) b = do
+  (p, ps) <- get
+  _ <- run' s1 b
+  (p', _) <- get
+  case p' of
+    Just _ -> pure ()
+    Nothing -> do
+      _ <- put (p, ps)
+      _ <- run' s2 b
+      return ()
+run' (Repeat s) b = do
+  p <- get
+  _ <- run' s b
+  (p', _) <- get
+  case p' of
+    Just _ -> run' (Repeat s) b
+    Nothing -> do
+       put p
+       pure ()
 
 run :: Strategy -> Board -> Position -> [Position]
-run (Moves ms) b p0  = snd $ foldr f (pure p0, []) ms where
-     f m (p, ps) = maybe (Nothing, ps) (\p'' -> (Just p'', ps ++ [p''])) ( p >>= move b m )
-
-
-
+run s b p = snd $ execState (run' s b) (pure p, [])

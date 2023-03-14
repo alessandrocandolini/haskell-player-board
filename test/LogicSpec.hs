@@ -7,6 +7,7 @@ import Test.Hspec.QuickCheck
 import Test.QuickCheck.Property
 import Test.QuickCheck
 import Data.Group
+import Prelude hiding (Left, Right, repeat)
 
 instance Arbitrary Direction where
   arbitrary = arbitraryBoundedEnum
@@ -55,12 +56,34 @@ spec = describe "moves" $ do
         move (squareBoard 10) right (P 5 5) `shouldBe` Just (P 6 5)
 
 
-   describe "run" $ do
-     it "example 1: move horizontally (success)" $
+   describe "oneStep" $ do
+     it "move horizontally (success)" $
         run (oneStep right) (squareBoard 10) (initial 2 3) `shouldBe` [(P 3 3)]
-     it "example 1: move horizontally (failure)" $
+     it "move horizontally (failure)" $
         run (oneStep right) (squareBoard 10) (initial 9 3) `shouldBe` []
-     it "example 2: move horizontally two steps (success)" $
-        run (oneStep down `andThen` oneStep right `andThen` oneStep right) (squareBoard 10) (initial 5 5) `shouldBe` [(P 5 4) , (P 6 4), (P 7 4)]
-     it "example 2: move horizontally two steps (failure)" $
+   describe "andThen" $ do
+     it "move horizontally two steps (success)" $
+        run (oneStep down `andThen` oneStep right `andThen` oneStep right) (squareBoard 10) (initial 5 5) `shouldBe` [(P 7 4) , (P 6 4), (P 5 4)]
+     it "move horizontally two steps (failure at the next step)" $
         run (oneStep down `andThen` oneStep right `andThen` oneStep right) (squareBoard 10) (initial 9 5) `shouldBe` [(P 9 4)]
+     it "move horizontally two steps (failure at the first step)" $
+        run (oneStep right `andThen` oneStep down `andThen` oneStep right `andThen` oneStep right) (squareBoard 10) (initial 9 5) `shouldBe` []
+     it "example 1: move horizontally two steps (failure at the next step)" $
+        run (oneStep right `andThen` oneStep down `andThen` oneStep left) (squareBoard 10) (initial 8 0) `shouldBe` [(P 9 0)]
+     it "example 2: example with only two (valid) moves" $
+        run (oneStep up `andThen` oneStep right) (squareBoard 10) (initial 9 0) `shouldBe` [(P 9 1)]
+   describe "orElse" $ do
+     it "move first step works" $
+        run (oneStep right `orElse` oneStep up) (squareBoard 10) (initial 8 0) `shouldBe` [(P 9 0)]
+     it "move first step fails" $
+        run (oneStep right `orElse` oneStep up) (squareBoard 10) (initial 9 0) `shouldBe` [(P 9 1)]
+   describe "repeat" $ do
+     it "move all line" $
+        run (repeat (oneStep right)) (squareBoard 5) (initial 0 0) `shouldBe` [(P 4 0), (P 3 0), (P 2 0), (P 1 0)]
+     it "move all line and one step down" $
+        run (repeat (oneStep right) `andThen` oneStep up) (squareBoard 5) (initial 0 0) `shouldBe` [(P 4 1), (P 4 0), (P 3 0), (P 2 0), (P 1 0)]
+   describe "horizontal" $ do
+     it "move all board diagonal" $
+        run diagonal (squareBoard 5) (initial 0 0) `shouldBe` [(P 4 4), (P 4 3) ,(P 3 3 ), (P 3 2), (P 2 2), (P 2 1), (P 1 1) , (P 1 0)]
+     --it "move all board" $
+        --run horizontal (squareBoard 5) (initial 0 0) `shouldBe` [(P 4 4), (P 3 4), (P 2 4),(P 1 4),(P 0 4),(P 0 3),(P 1 3),(P 2 3),(P 3 3),(P 4 3),(P 4 2),(P 3 2),(P 2 2 ),(P 1 2),(P 0 2),(P 0 1),(P 1 1),(P 2 1),(P 3 1),(P 4 1),(P 4 0),(P 3 0), (P 2 0), (P 1 0)]
